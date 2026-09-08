@@ -44,24 +44,28 @@ class HabitsNotifier extends AsyncNotifier<List<Habit>> {
     final created = await ref.read(habitServiceProvider).createHabit(habit);
     await NotificationService.instance.scheduleForHabit(created);
     await refresh();
+    await ref.read(widgetServiceProvider).syncTodayToWidget();
   }
 
   Future<void> updateHabit(String id, Map<String, dynamic> changes) async {
     final updated = await ref.read(habitServiceProvider).updateHabit(id, changes);
     await NotificationService.instance.scheduleForHabit(updated);
     await refresh();
+    await ref.read(widgetServiceProvider).syncTodayToWidget();
   }
 
   Future<void> archiveHabit(String id) async {
     await ref.read(habitServiceProvider).archiveHabit(id);
     await NotificationService.instance.cancelForHabit(id);
     await refresh();
+    await ref.read(widgetServiceProvider).syncTodayToWidget();
   }
 
   Future<void> deleteHabit(String id) async {
     await ref.read(habitServiceProvider).deleteHabit(id);
     await NotificationService.instance.cancelForHabit(id);
     await refresh();
+    await ref.read(widgetServiceProvider).syncTodayToWidget();
   }
 
   Future<void> tick(String habitId, {DateTime? date}) async {

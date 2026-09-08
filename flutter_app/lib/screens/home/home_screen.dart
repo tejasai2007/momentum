@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import '../../providers/app_providers.dart';
 import 'habits_tab.dart';
 import '../journal/journal_screen.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   int _index = 0;
+  static const MethodChannel _widgetSyncChannel = MethodChannel('tickoffclone/widget_sync');
 
   final _pages = const [
     HabitsTab(),
@@ -25,10 +27,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _widgetSyncChannel.setMethodCallHandler(_handleWidgetSync);
+  }
+
+  Future<void> _handleWidgetSync(MethodCall call) async {
+    if (call.method == 'onHabitToggled') {
+      ref.invalidate(habitsProvider);
+      ref.invalidate(weekLogsProvider);
+    }
   }
 
   @override
   void dispose() {
+    _widgetSyncChannel.setMethodCallHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -36,9 +47,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // The Android widget can tick a habit while this app is backgrounded or
-    // fully closed (via the background isolate in widget_service.dart).
-    // Refresh on every resume so the in-app UI always reflects the latest
-    // Supabase state instead of a stale cached one.
+    // fully closed. Refresh on every resume so the in-app UI always reflects
+    // the latest Supabase state instead of a stale cached one.
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(habitsProvider);
       ref.invalidate(weekLogsProvider);

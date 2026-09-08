@@ -1,4 +1,4 @@
-# TickOff Clone
+# Momentum
 
 A habit tracker inspired by **TickOff** (streak visualization, list view, journal
 with photos, backdating, light/dark themes) built with **Flutter** + **Supabase**,
@@ -6,7 +6,7 @@ plus a native **Android home-screen widget** for ticking habits without opening
 the app. A web app can reuse the same Supabase backend as a separate project later.
 
 ```
-tickoff_clone/
+momentum/
 ├── supabase/
 │   └── schema.sql          # run this once in your Supabase project
 └── flutter_app/            # the Flutter app + Android widget
@@ -135,7 +135,7 @@ Xiaomi/Huawei, are aggressive about killing background alarms).
    `flutter build apk` + install) and log in at least once so it has habits
    to show.
 2. Long-press an empty spot on the Android home screen → **Widgets** →
-   scroll to **TickOff Clone** → drag the widget onto the home screen.
+   scroll to **Momentum** → drag the widget onto the home screen.
 3. The widget shows today's habits with their streak length. Tapping a
    habit's circle ticks it off immediately — this works via a background
    broadcast (`home_widget` package) straight into `HabitService`, so the

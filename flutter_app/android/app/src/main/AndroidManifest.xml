@@ -65,14 +65,16 @@
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
-        <!-- home_widget plugin's receiver: turns a tap on a widget row into
-             a background call into Dart's `backgroundCallback` even when
-             the app process isn't running -->
+        <!-- Receives a tap on a widget habit row and ticks the habit natively
+             via the Supabase REST API (bypasses the Dart background isolate,
+             which cannot access shared_preferences/supabase_flutter). It is
+             reached only through PendingIntents created by this app, so it can
+             stay nonexported. -->
         <receiver
-            android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:name=".HabitTickReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+                <action android:name="com.tickoffclone.app.ACTION_TICK_HABIT" />
             </intent-filter>
         </receiver>
 

@@ -1,12 +1,12 @@
 package com.tickoffclone.app
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 
 /**
@@ -17,9 +17,10 @@ import es.antonborri.home_widget.HomeWidgetLaunchIntent
  *    `HomeWidget.saveWidgetData` (see lib/services/widget_service.dart).
  *  - This provider just points a ListView at [HabitWidgetService], which
  *    reads that same SharedPreferences file and renders one row per habit.
- *  - Tapping the whole widget opens the app. Tapping a row's check circle
- *    fires a background intent that runs `backgroundCallback` in Dart
- *    *without* opening the UI, then the widget is asked to refresh.
+ *  - Tapping the whole widget opens the app. Tapping a habit row fires a
+ *    broadcast handled by [HabitTickReceiver], which ticks the habit via the
+ *    Supabase REST API *without* opening the UI, then asks the widget to
+ *    refresh.
  */
 class HabitWidgetProvider : AppWidgetProvider() {
 
@@ -36,13 +37,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
         ) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(
-                Intent(context, HabitWidgetProvider::class.java).component
+                android.content.ComponentName(context, HabitWidgetProvider::class.java)
             )
             manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_habit_list)
         }
     }
 
     companion object {
+        const val ACTION_TICK_HABIT = "com.tickoffclone.app.ACTION_TICK_HABIT"
+
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.habit_widget_layout)
 
@@ -58,9 +61,16 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
             // Template so each row's PendingIntent (set in the RemoteViewsFactory)
             // knows what to fill in — required for collection-based widgets.
-            val clickTemplateIntent = HomeWidgetBackgroundIntent.getBroadcast(
+            // FLAG_MUTABLE is mandatory on Android 12+ (API 31+) so the
+            // fill-in intent can supply the habitId and toggle state to HabitTickReceiver.
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            val clickTemplateIntent = PendingIntent.getBroadcast(
                 context,
-                Uri.parse("tickoffclone://tickhabit")
+                0,
+                Intent(context, HabitTickReceiver::class.java).apply {
+                    action = ACTION_TICK_HABIT
+                },
+                flags
             )
             views.setPendingIntentTemplate(R.id.widget_habit_list, clickTemplateIntent)
 

@@ -59,12 +59,21 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
         } catch (_: Exception) { /* fall back to default color from XML */ }
 
         // Fill in the template PendingIntent set on the ListView in
-        // HabitWidgetProvider — this is what makes tapping THIS row tick
-        // off THIS habit, even while the app is closed. Android merges this
+        // HabitWidgetProvider — this is what makes tapping THIS row tick or
+        // un-tick THIS habit, even while the app is closed. Android merges this
         // Intent's `data` Uri into the container's PendingIntent template.
+        // We attach it to the whole row (`item_container`) so tapping anywhere
+        // on a habit row toggles it, not just the small check mark.
+        // `doneToday` tells HabitTickReceiver whether this tap is a tick
+        // (was not done) or an un-tick (was already done).
         val fillInIntent = Intent().apply {
-            data = android.net.Uri.parse("tickoffclone://tickhabit?habitId=${habit.id}")
+            putExtra("habitId", habit.id)
+            putExtra("doneToday", habit.doneToday)
+            data = android.net.Uri.parse(
+                "tickoffclone://tickhabit?habitId=${habit.id}&doneToday=${habit.doneToday}"
+            )
         }
+        views.setOnClickFillInIntent(R.id.item_container, fillInIntent)
         views.setOnClickFillInIntent(R.id.item_habit_check, fillInIntent)
 
         return views
