@@ -54,23 +54,14 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
         createdAt: DateTime.now(),
       );
 
+      if (_reminder != null) {
+        await NotificationService.instance.ensureReminderPermissions();
+      }
+
       if (widget.existing == null) {
         await ref.read(habitsProvider.notifier).addHabit(habit);
       } else {
         await ref.read(habitsProvider.notifier).updateHabit(widget.existing!.id, habit.toInsertMap());
-      }
-      // Auto-set: the first time a reminder is attached to a habit, walk the
-      // user through the notification / exact-alarm / full-screen / battery
-      // permissions. Existing grants are skipped, so this only nags when
-      // something is genuinely missing.
-      if (_reminder != null && mounted) {
-        final results =
-            await NotificationService.instance.ensureReminderPermissions();
-        // Exact-alarm may have just been granted, so re-schedule the reminder
-        // with the upgraded precision.
-        if (results[AlarmPermission.exactAlarms] == true) {
-          await NotificationService.instance.scheduleForHabit(habit);
-        }
       }
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -117,7 +108,7 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
               spacing: 10,
               runSpacing: 10,
               children: habitColorPalette.map((c) {
-                final selected = _color.value == c.value;
+                final selected = _color.toARGB32() == c.toARGB32();
                 return GestureDetector(
                   onTap: () => setState(() => _color = c),
                   child: Container(

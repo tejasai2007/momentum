@@ -155,91 +155,31 @@ class NotificationService {
     return results;
   }
 
-  /// Fires the permission-request flow only for permissions that are still
-  /// missing, skipping ones the user already granted. Use this from the
-  /// habit-reminder save path so the first time a reminder is set the OS
-  /// prompts appear automatically without nagging on every save.
+  /// Ensures notification permission is granted so reminders can be delivered.
+  /// If already granted (or permanently denied), this returns immediately
+  /// without prompting or redirecting the user to system settings.
   Future<Map<AlarmPermission, bool>> ensureReminderPermissions() async {
-    final current = await checkPermissions();
-    if (!current.values.any((g) => g == false)) return current;
-    // prune the granted ones and only ask for what's still outstanding
-    final outstanding = <AlarmPermission>[];
-    for (final entry in current.entries) {
-      if (!entry.value) outstanding.add(entry.key);
-    }
-    return _requestPermissions(outstanding);
-  }
-
-  Future<Map<AlarmPermission, bool>> _requestPermissions(
-      List<AlarmPermission> which) async {
-    if (which.isEmpty) return {};
     if (!_initialized) await init();
-    final results = <AlarmPermission, bool>{};
 
-    if (which.contains(AlarmPermission.notifications)) {
-      try {
-        results[AlarmPermission.notifications] =
-            (await Permission.notification.request()).isGranted;
-      } catch (_) {}
-    } else {
-      try {
-        results[AlarmPermission.notifications] =
-            await Permission.notification.status.isGranted;
-      } catch (_) {}
+    final notifStatus = await Permission.notification.status;
+    if (!notifStatus.isGranted && !notifStatus.isPermanentlyDenied) {
+      await Permission.notification.request();
     }
 
-    if (which.contains(AlarmPermission.exactAlarms)) {
-      try {
-        results[AlarmPermission.exactAlarms] =
-            (await Permission.scheduleExactAlarm.request()).isGranted;
-        _canScheduleExact = results[AlarmPermission.exactAlarms]!;
-      } catch (_) {
-        final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-        try {
-          results[AlarmPermission.exactAlarms] =
-              await androidImpl?.requestExactAlarmsPermission() ?? false;
-          _canScheduleExact = results[AlarmPermission.exactAlarms]!;
-        } catch (_) {
-          results[AlarmPermission.exactAlarms] = false;
-          _canScheduleExact = false;
-        }
-      }
-    } else {
-      results[AlarmPermission.exactAlarms] = _canScheduleExact;
-    }
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      _canScheduleExact =
+          await androidImpl?.canScheduleExactNotifications() ?? false;
+    } catch (_) {}
 
-    if (which.contains(AlarmPermission.fullScreenNotifications)) {
-      try {
-        final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-        results[AlarmPermission.fullScreenNotifications] =
-            await androidImpl?.requestFullScreenIntentPermission() ?? false;
-      } catch (_) {
-        results[AlarmPermission.fullScreenNotifications] = false;
-      }
-    } else {
-      // No status getter for full-screen intents; report as unmet.
-      results[AlarmPermission.fullScreenNotifications] = false;
-    }
-
-    if (which.contains(AlarmPermission.ignoreBatteryOptimizations)) {
-      try {
-        results[AlarmPermission.ignoreBatteryOptimizations] =
-            (await Permission.ignoreBatteryOptimizations.request()).isGranted;
-      } catch (_) {
-        results[AlarmPermission.ignoreBatteryOptimizations] = false;
-      }
-    } else {
-      try {
-        results[AlarmPermission.ignoreBatteryOptimizations] =
-            await Permission.ignoreBatteryOptimizations.status.isGranted;
-      } catch (_) {
-        results[AlarmPermission.ignoreBatteryOptimizations] = false;
-      }
-    }
-
-    return results;
+    return {
+      AlarmPermission.notifications:
+          await Permission.notification.status.isGranted,
+      AlarmPermission.exactAlarms: _canScheduleExact,
+      AlarmPermission.fullScreenNotifications: false,
+      AlarmPermission.ignoreBatteryOptimizations: false,
+    };
   }
 
   /// Resolves `tz.local` to the device's real IANA zone so "daily at HH:MM"
