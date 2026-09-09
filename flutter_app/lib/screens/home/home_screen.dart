@@ -5,6 +5,7 @@ import '../../providers/app_providers.dart';
 import 'habits_tab.dart';
 import '../journal/journal_screen.dart';
 import '../settings/settings_screen.dart';
+import '../todo/todo_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   final _pages = const [
     HabitsTab(),
+    TodoScreen(),
     JournalScreen(),
     SettingsScreen(),
   ];
@@ -53,6 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       ref.invalidate(habitsProvider);
       ref.invalidate(weekLogsProvider);
       ref.invalidate(journalEntriesProvider);
+      ref.invalidate(todoListsProvider);
     }
   }
 
@@ -65,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.check_circle_outline_rounded), selectedIcon: Icon(Icons.check_circle_rounded), label: 'Habits'),
+          NavigationDestination(icon: Icon(Icons.checklist_outlined), selectedIcon: Icon(Icons.checklist_rounded), label: 'Todos'),
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), selectedIcon: Icon(Icons.menu_book_rounded), label: 'Journal'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Settings'),
         ],

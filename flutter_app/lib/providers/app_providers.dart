@@ -3,9 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/habit.dart';
 import '../models/habit_log.dart';
 import '../models/journal_entry.dart';
+import '../models/todo_item.dart';
+import '../models/todo_list.dart';
 import '../services/auth_service.dart';
 import '../services/habit_service.dart';
 import '../services/journal_service.dart';
+import '../services/todo_service.dart';
 import '../services/widget_service.dart';
 import '../services/notification_service.dart';
 
@@ -13,6 +16,7 @@ import '../services/notification_service.dart';
 final authServiceProvider = Provider((ref) => AuthService());
 final habitServiceProvider = Provider((ref) => HabitService());
 final journalServiceProvider = Provider((ref) => JournalService());
+final todoServiceProvider = Provider((ref) => TodoService());
 final widgetServiceProvider =
     Provider((ref) => WidgetService(ref.read(habitServiceProvider)));
 
@@ -127,6 +131,69 @@ class JournalNotifier extends AsyncNotifier<List<JournalEntry>> {
     if (imagePaths.isNotEmpty) {
       await ref.read(journalServiceProvider).deleteImages(imagePaths);
     }
+    await refresh();
+  }
+}
+
+// ---------------- Todo ----------------
+final todoListsProvider =
+    AsyncNotifierProvider<TodoListsNotifier, List<TodoList>>(TodoListsNotifier.new);
+
+class TodoListsNotifier extends AsyncNotifier<List<TodoList>> {
+  @override
+  Future<List<TodoList>> build() async {
+    return ref.read(todoServiceProvider).fetchLists();
+  }
+
+  Future<void> refresh() async {
+    state = await AsyncValue.guard(() => ref.read(todoServiceProvider).fetchLists());
+  }
+
+  Future<void> addList(TodoList list) async {
+    await ref.read(todoServiceProvider).createList(list);
+    await refresh();
+  }
+
+  Future<void> updateList(String id, Map<String, dynamic> changes) async {
+    await ref.read(todoServiceProvider).updateList(id, changes);
+    await refresh();
+  }
+
+  Future<void> deleteList(String id) async {
+    await ref.read(todoServiceProvider).deleteList(id);
+    await refresh();
+  }
+}
+
+final todoItemsProvider =
+    AsyncNotifierProvider.family<TodoItemsNotifier, List<TodoItem>, String>(
+  TodoItemsNotifier.new,
+);
+
+class TodoItemsNotifier extends FamilyAsyncNotifier<List<TodoItem>, String> {
+  @override
+  Future<List<TodoItem>> build(String listId) async {
+    return ref.read(todoServiceProvider).fetchItems(listId);
+  }
+
+  Future<void> refresh() async {
+    final listId = arg;
+    state = await AsyncValue.guard(() => ref.read(todoServiceProvider).fetchItems(listId));
+  }
+
+  Future<void> addItem(TodoItem item) async {
+    await ref.read(todoServiceProvider).createItem(item);
+    await refresh();
+  }
+
+  Future<void> updateItem(String id, Map<String, dynamic> changes) async {
+    await ref.read(todoServiceProvider).updateItem(id, changes);
+    await refresh();
+    ref.invalidate(todoListsProvider);
+  }
+
+  Future<void> deleteItem(String id) async {
+    await ref.read(todoServiceProvider).deleteItem(id);
     await refresh();
   }
 }

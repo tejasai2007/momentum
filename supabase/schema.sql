@@ -63,6 +63,40 @@ create index if not exists journal_user_id_idx on public.journal_entries (user_i
 create index if not exists journal_habit_id_idx on public.journal_entries (habit_id);
 
 -- ---------------------------------------------------------
+-- TODOS  (grouped into user-created "lists")
+-- ---------------------------------------------------------
+create table if not exists public.todo_lists (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  color text not null default '#6C5CE7',        -- hex color rendered client-side
+  icon text not null default 'list',            -- icon key rendered client-side
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists todo_lists_user_id_idx on public.todo_lists (user_id);
+
+create table if not exists public.todo_items (
+  id uuid primary key default gen_random_uuid(),
+  list_id uuid not null references public.todo_lists (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  title text not null,
+  notes text,
+  is_completed boolean not null default false,
+  due_date date,                                 -- reminder due date, nullable
+  priority int not null default 0,               -- 0=none, 1=low, 2=medium, 3=high
+  completed_at timestamptz,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists todo_items_list_id_idx on public.todo_items (list_id);
+create index if not exists todo_items_user_id_idx on public.todo_items (user_id);
+
+-- ---------------------------------------------------------
 -- USER SETTINGS (theme, default home view, etc.)
 -- ---------------------------------------------------------
 create table if not exists public.user_settings (
@@ -91,6 +125,14 @@ drop trigger if exists trg_journal_updated_at on public.journal_entries;
 create trigger trg_journal_updated_at before update on public.journal_entries
   for each row execute function public.set_updated_at();
 
+drop trigger if exists trg_todo_lists_updated_at on public.todo_lists;
+create trigger trg_todo_lists_updated_at before update on public.todo_lists
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_todo_items_updated_at on public.todo_items;
+create trigger trg_todo_items_updated_at before update on public.todo_items
+  for each row execute function public.set_updated_at();
+
 -- ---------------------------------------------------------
 -- Auto-create a settings row when a user signs up
 -- ---------------------------------------------------------
@@ -115,6 +157,8 @@ alter table public.habits enable row level security;
 alter table public.habit_logs enable row level security;
 alter table public.journal_entries enable row level security;
 alter table public.user_settings enable row level security;
+alter table public.todo_lists enable row level security;
+alter table public.todo_items enable row level security;
 
 -- habits
 create policy "habits_select_own" on public.habits for select using (auth.uid() = user_id);
@@ -138,6 +182,18 @@ create policy "journal_delete_own" on public.journal_entries for delete using (a
 create policy "settings_select_own" on public.user_settings for select using (auth.uid() = user_id);
 create policy "settings_update_own" on public.user_settings for update using (auth.uid() = user_id);
 create policy "settings_insert_own" on public.user_settings for insert with check (auth.uid() = user_id);
+
+-- todo_lists
+create policy "todo_lists_select_own" on public.todo_lists for select using (auth.uid() = user_id);
+create policy "todo_lists_insert_own" on public.todo_lists for insert with check (auth.uid() = user_id);
+create policy "todo_lists_update_own" on public.todo_lists for update using (auth.uid() = user_id);
+create policy "todo_lists_delete_own" on public.todo_lists for delete using (auth.uid() = user_id);
+
+-- todo_items
+create policy "todo_items_select_own" on public.todo_items for select using (auth.uid() = user_id);
+create policy "todo_items_insert_own" on public.todo_items for insert with check (auth.uid() = user_id);
+create policy "todo_items_update_own" on public.todo_items for update using (auth.uid() = user_id);
+create policy "todo_items_delete_own" on public.todo_items for delete using (auth.uid() = user_id);
 
 -- =========================================================
 -- STORAGE: bucket for journal photos
