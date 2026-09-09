@@ -78,7 +78,37 @@ class Habit {
             : '${reminderTime!.hour.toString().padLeft(2, '0')}:${reminderTime!.minute.toString().padLeft(2, '0')}:00',
         'archived': archived,
         'sort_order': sortOrder,
+        'created_at': createdAt.toIso8601String(),
       };
+
+  Habit copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? icon,
+    Color? color,
+    HabitFrequency? frequency,
+    List<int>? customDays,
+    int? targetPerPeriod,
+    TimeOfDay? reminderTime,
+    bool? archived,
+    int? sortOrder,
+    DateTime? createdAt,
+  }) =>
+      Habit(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        name: name ?? this.name,
+        icon: icon ?? this.icon,
+        color: color ?? this.color,
+        frequency: frequency ?? this.frequency,
+        customDays: customDays ?? this.customDays,
+        targetPerPeriod: targetPerPeriod ?? this.targetPerPeriod,
+        reminderTime: reminderTime ?? this.reminderTime,
+        archived: archived ?? this.archived,
+        sortOrder: sortOrder ?? this.sortOrder,
+        createdAt: createdAt ?? this.createdAt,
+      );
 
   static Color _colorFromHex(String hex) {
     final cleaned = hex.replaceFirst('#', '');
@@ -86,5 +116,5 @@ class Habit {
   }
 
   static String _hexFromColor(Color c) =>
-      '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
+      '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
 }

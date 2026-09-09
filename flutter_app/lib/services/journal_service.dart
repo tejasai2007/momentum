@@ -47,4 +47,13 @@ class JournalService {
   }
 
   Future<void> deleteEntry(String id) => _client.from('journal_entries').delete().eq('id', id);
+
+  Future<void> deleteImages(List<String> paths) async {
+    if (paths.isEmpty) return;
+    try {
+      await _client.storage.from(AppConstants.journalBucket).remove(paths);
+    } catch (_) {
+      // Storage deletion failure should not block other operations
+    }
+  }
 }

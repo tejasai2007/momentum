@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/full_screen_image_viewer.dart';
+import '../../widgets/habit_card.dart';
 import 'add_journal_entry_screen.dart';
+import 'journal_detail_screen.dart';
 
 class JournalScreen extends ConsumerWidget {
   const JournalScreen({super.key});
@@ -10,6 +13,7 @@ class JournalScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(journalEntriesProvider);
+    final habits = ref.watch(habitsProvider).valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -20,8 +24,11 @@ class JournalScreen extends ConsumerWidget {
         data: (entries) {
           if (entries.isEmpty) {
             return Center(
-              child: Text('Your journey timeline is empty.\nAdd a note or photo to get started.',
-                  textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500])),
+              child: Text(
+                'Your journey timeline is empty.\nAdd a note or photo to get started.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[500]),
+              ),
             );
           }
           return RefreshIndicator(
@@ -31,35 +38,95 @@ class JournalScreen extends ConsumerWidget {
               itemCount: entries.length,
               itemBuilder: (context, i) {
                 final e = entries[i];
+                final habit = e.habitId != null
+                    ? habits.where((h) => h.id == e.habitId).firstOrNull
+                    : null;
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(DateFormat.yMMMd().format(e.entryDate),
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                        const SizedBox(height: 4),
-                        if (e.title != null && e.title!.isNotEmpty)
-                          Text(e.title!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        if (e.body != null && e.body!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(e.body!),
-                        ],
-                        if (e.imagePaths.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            height: 90,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: e.imagePaths.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 8),
-                              itemBuilder: (context, j) => _JournalThumb(path: e.imagePaths[j]),
-                            ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => JournalDetailScreen(entry: e),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                DateFormat.yMMMd().format(e.entryDate),
+                                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              ),
+                              if (habit != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: habit.color.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        habitIconMap[habit.icon] ?? Icons.star_rounded,
+                                        size: 13,
+                                        color: habit.color,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        habit.name,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: habit.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
+                          const SizedBox(height: 4),
+                          if (e.title != null && e.title!.isNotEmpty)
+                            Text(
+                              e.title!,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          if (e.body != null && e.body!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              e.body!,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (e.imagePaths.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 90,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: e.imagePaths.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                itemBuilder: (context, j) => GestureDetector(
+                                  onTap: () => FullScreenImageViewer.show(
+                                    context,
+                                    imagePaths: e.imagePaths,
+                                    initialIndex: j,
+                                  ),
+                                  child: _JournalThumb(path: e.imagePaths[j]),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 );
@@ -70,7 +137,7 @@ class JournalScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AddJournalEntryScreen()),
+          MaterialPageRoute(builder: (_) => const AddEditJournalEntryScreen()),
         ),
         icon: const Icon(Icons.add),
         label: const Text('New entry'),
@@ -92,7 +159,10 @@ class _JournalThumb extends ConsumerWidget {
           return Container(
             width: 90,
             height: 90,
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(12),
+            ),
           );
         }
         return ClipRRect(

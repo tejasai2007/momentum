@@ -37,4 +37,26 @@ class JournalEntry {
         'body': body,
         'image_paths': imagePaths,
       };
+
+  JournalEntry copyWith({
+    String? id,
+    String? userId,
+    String? habitId,
+    DateTime? entryDate,
+    String? title,
+    String? body,
+    List<String>? imagePaths,
+    DateTime? createdAt,
+  }) =>
+      JournalEntry(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        habitId: habitId ?? this.habitId,
+        entryDate: entryDate ?? this.entryDate,
+        title: title ?? this.title,
+        body: body ?? this.body,
+        imagePaths: imagePaths ?? this.imagePaths,
+        createdAt: createdAt ?? this.createdAt,
+      );
 }
+

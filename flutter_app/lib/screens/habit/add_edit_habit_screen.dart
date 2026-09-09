@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme.dart';
 import '../../models/habit.dart';
 import '../../providers/app_providers.dart';
@@ -21,6 +22,7 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
   late Color _color;
   late HabitFrequency _frequency;
   late int _target;
+  late DateTime _createdAt;
   TimeOfDay? _reminder;
   bool _saving = false;
 
@@ -34,6 +36,13 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
     _frequency = h?.frequency ?? HabitFrequency.daily;
     _target = h?.targetPerPeriod ?? 1;
     _reminder = h?.reminderTime;
+    _createdAt = h?.createdAt ?? DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -51,7 +60,7 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
         reminderTime: _reminder,
         archived: false,
         sortOrder: widget.existing?.sortOrder ?? 0,
-        createdAt: DateTime.now(),
+        createdAt: _createdAt,
       );
 
       if (_reminder != null) {
@@ -71,6 +80,8 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.existing == null ? 'New habit' : 'Edit habit')),
       body: Form(
@@ -95,7 +106,7 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
                   onTap: () => setState(() => _icon = e.key),
                   child: CircleAvatar(
                     radius: 24,
-                    backgroundColor: selected ? _color : _color.withOpacity(0.12),
+                    backgroundColor: selected ? _color : _color.withValues(alpha: 0.12),
                     child: Icon(e.value, color: selected ? Colors.white : _color),
                   ),
                 );
@@ -146,6 +157,53 @@ class _AddEditHabitScreenState extends ConsumerState<AddEditHabitScreen> {
                 onChanged: (v) => setState(() => _target = v.round()),
               ),
             ],
+            const SizedBox(height: 24),
+            const Text('Date of creation', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _createdAt,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (picked != null) {
+                  setState(() => _createdAt = picked);
+                }
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1F) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 20, color: _color),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Starting date',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat.yMMMMd().format(_createdAt),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.edit_calendar_outlined, color: Colors.grey[500]),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             const Text('Reminder', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),

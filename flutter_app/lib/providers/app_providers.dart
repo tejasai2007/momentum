@@ -114,8 +114,19 @@ class JournalNotifier extends AsyncNotifier<List<JournalEntry>> {
     await refresh();
   }
 
-  Future<void> deleteEntry(String id) async {
+  Future<void> updateEntry(String id, Map<String, dynamic> changes, {List<String> imagesToDelete = const []}) async {
+    await ref.read(journalServiceProvider).updateEntry(id, changes);
+    if (imagesToDelete.isNotEmpty) {
+      await ref.read(journalServiceProvider).deleteImages(imagesToDelete);
+    }
+    await refresh();
+  }
+
+  Future<void> deleteEntry(String id, {List<String> imagePaths = const []}) async {
     await ref.read(journalServiceProvider).deleteEntry(id);
+    if (imagePaths.isNotEmpty) {
+      await ref.read(journalServiceProvider).deleteImages(imagePaths);
+    }
     await refresh();
   }
 }
